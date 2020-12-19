@@ -8,8 +8,8 @@ use std::result::Result;
 #[derive(Debug)]
 struct PolicyAndPassword {
     character: char,
-    min: u32,
-    max: u32,
+    min: usize,
+    max: usize,
     password: String,
 }
 
@@ -22,14 +22,12 @@ fn read_lines(filename: &str) -> Result<Vec<PolicyAndPassword>, String> {
         let line = line.map_err(|e| e.to_string())?;
         match expr.captures(&line) {
             Some(m) => {
-                let pp = PolicyAndPassword{
+                pps.push(PolicyAndPassword{
                     character: m.get(3).unwrap().as_str().chars().nth(0).unwrap(),
                     min: m.get(1).unwrap().as_str().parse().unwrap(),
                     max: m.get(2).unwrap().as_str().parse().unwrap(),
                     password: String::from(m.get(4).unwrap().as_str()),
-                };
-                println!("line: {} pp: {:?}", line, &pp);
-                pps.push(pp);
+                });
             }
             None => {
                 return Err(format!("Badly formatted string: \"{}\"", line));
@@ -39,16 +37,30 @@ fn read_lines(filename: &str) -> Result<Vec<PolicyAndPassword>, String> {
     Ok(pps)
 }
 
-fn count_valid(pps: &Vec<PolicyAndPassword>) -> i32 {
+fn valid_part1(pp: &PolicyAndPassword) -> bool {
+    let mut count = 0;
+    for c in pp.password.chars() {
+        if c == pp.character {
+            count += 1;
+        }
+    }
+    return pp.min <= count && count <= pp.max
+}
+
+fn valid_part2(pp: &PolicyAndPassword) -> bool {
+    let first = pp.password.chars()
+                           .nth(pp.min - 1)
+                           .map_or(false, |c| c == pp.character);
+    let second = pp.password.chars()
+                            .nth(pp.max - 1)
+                            .map_or(false, |c| c == pp.character);
+    (first || second) && !(first && second)
+}
+
+fn count_valid(pps: &Vec<PolicyAndPassword>, validator: &dyn Fn(&PolicyAndPassword) -> bool) -> i32 {
     let mut valid_count = 0;
     for pp in pps {
-        let mut count = 0;
-        for c in pp.password.chars() {
-            if c == pp.character {
-                count += 1;
-            }
-        }
-        if pp.min <= count && count <= pp.max {
+        if validator(pp) {
             valid_count += 1;
         }
     }
@@ -57,5 +69,6 @@ fn count_valid(pps: &Vec<PolicyAndPassword>) -> i32 {
 
 fn main() {
     let lines = read_lines("input.txt").unwrap();
-    println!("Valid passwords: {}", count_valid(&lines));
+    println!("Valid passwords for part 1: {}", count_valid(&lines, &valid_part1));
+    println!("Valid passwords for part 2: {}", count_valid(&lines, &valid_part2));
 }
