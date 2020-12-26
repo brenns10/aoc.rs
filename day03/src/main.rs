@@ -32,15 +32,17 @@ fn read_map(filename: &str) -> Result<Vec<Vec<char>>, String> {
     Ok(rows)
 }
 
-fn count_trees(map: &Vec<Vec<char>>, slope: usize) -> usize {
+fn count_trees(map: &Vec<Vec<char>>, down: usize, right: usize) -> usize {
     let mut col = 0;
+    let mut row = 0;
     let mut trees = 0;
     let cols = map[0].len();
-    for row in map {
-        if row[col] == '#' {
+    while row < map.len() {
+        if map[row][col] == '#' {
             trees += 1;
         }
-        col = (col + slope) % cols;
+        col = (col + right) % cols;
+        row += down;
     }
     trees
 }
@@ -48,5 +50,13 @@ fn count_trees(map: &Vec<Vec<char>>, slope: usize) -> usize {
 fn main() {
     let map = read_map("input.txt").unwrap();
     let slope = 3;
-    println!("Trees in slope {}: {}", slope, count_trees(&map, slope));
+    println!("Trees in slope {}: {}", slope, count_trees(&map, 1, slope));
+    let slopes = [(1, 1), (1, 3), (1, 5), (1, 7), (2, 1)];
+    let mut trees = 1;
+    for (down, right) in slopes.iter() {
+        let this_trees = count_trees(&map, *down, *right);
+        println!("Trees for down {} right {}: {}", down, right, this_trees);
+        trees *= this_trees;
+    }
+    println!("Product of the above: {}", trees);
 }
