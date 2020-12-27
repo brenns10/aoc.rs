@@ -38,6 +38,19 @@ fn read_bytes(filename: &str) -> Result<Vec<u16>, String> {
 
 fn main() {
     println!("Advent of Code Day 5!");
-    let ids = read_bytes("input.txt").unwrap();
-    println!("max id: {}", ids.iter().max().unwrap());
+    let mut ids = read_bytes("input.txt").unwrap();
+    ids.sort();
+    println!("max id: {}", ids[ids.len() - 1]);
+    let mut first = true;
+    let mut prev: u16 = 0;
+    for byte in ids {
+        if first {
+            first = false;
+        } else {
+            if byte != prev + 1 {
+                println!("Skip: {} -> {} ({}/{} -> {}/{})", prev, byte, row_no(prev), seat_no(prev), row_no(byte), seat_no(byte));
+            }
+        }
+        prev = byte;
+    }
 }
