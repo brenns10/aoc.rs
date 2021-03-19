@@ -94,9 +94,27 @@ fn count_reachable(rules: &Rules, sorted_colors: &Vec<String>, target: &str) -> 
     count
 }
 
+fn count_bags_for(rules: &Rules, sorted_colors: &Vec<String>, target: &str) -> Option<usize> {
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for color in sorted_colors {
+        let mut count: usize = 1;
+        for rule in rules.get(color).unwrap() {
+            let color2 = rule.color.as_ref();
+            count += rule.count * counts.get(&color2).unwrap();
+        }
+        counts.insert(&color, count);
+        if color == target {
+            return Some(count);
+        }
+    }
+    return None
+}
+
 fn main() {
     let rules = read_rules("input.txt").unwrap();
     let sorted_colors = topologic_sort(&rules).unwrap();
     let count = count_reachable(&rules, &sorted_colors, "shiny gold");
     println!("Shiny gold could be in {} bags (not including self)", count - 1);
+    let bags_in_gold = count_bags_for(&rules, &sorted_colors, "shiny gold");
+    println!("Shiny gold contains {} bags (not including self)", bags_in_gold.unwrap() - 1)
 }
