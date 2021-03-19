@@ -5,7 +5,7 @@ use std::io::BufRead;
 use std::vec::Vec;
 use std::result::Result;
 
-//# [derive(Debug)]
+# [derive(Debug, Copy, Clone)]
 enum Op {
     Acc,
     Jmp,
@@ -41,13 +41,15 @@ fn read_instrs(filename: &str) -> Result<Vec<Instr>, String> {
     Ok(instrs)
 }
 
-fn exec_until_loop(instrs: &Vec<Instr>) -> Result<isize, String> {
+fn execute(instrs: &Vec<Instr>) -> Result<(isize, bool), String> {
     let mut acc: isize = 0;
     let mut idx: usize = 0;
-    let mut seen = vec![false; instrs.len()];
+    let mut cnt: isize = 0;
+    let mut seen = vec![-1; instrs.len()];
 
-    while idx < instrs.len() && !seen[idx] {
-        seen[idx] = true;
+    while idx < instrs.len() && seen[idx] < 0 {
+        seen[idx] = cnt;
+        cnt += 1;
         match instrs[idx].op {
             Op::Acc => {
                 acc += instrs[idx].arg;
@@ -55,7 +57,7 @@ fn exec_until_loop(instrs: &Vec<Instr>) -> Result<isize, String> {
             }
             Op::Jmp => {
                 let new_idx = (idx as isize) + instrs[idx].arg;
-                if new_idx < 0 || new_idx >= (instrs.len() as isize) {
+                if new_idx < 0 || new_idx >= (instrs.len() as isize) + 1 {
                     return Err(format!("Bad jump target {} from instr {}", new_idx, idx))
                 }
                 idx = new_idx as usize;
@@ -63,17 +65,39 @@ fn exec_until_loop(instrs: &Vec<Instr>) -> Result<isize, String> {
             Op::Nop => { idx += 1 },
         }
     }
-    if idx >= instrs.len() {
-        return Err("Program terminated without loop".to_string());
-    }
+    let infinite_loop = idx < instrs.len();
+    Ok((acc, infinite_loop))
+}
 
-    Ok(acc)
+fn exec_until_loop(instrs: &Vec<Instr>) -> Result<isize, String> {
+    execute(instrs).and_then(
+        |r| {
+            if r.1 { Ok(r.0) }
+            else { Err("Did not infinite loop".to_string()) }
+        }
+    )
+}
+
+fn find_swapped_instr(instrs: &mut Vec<Instr>) -> Result<(isize, usize), String> {
+    for i in 0..instrs.len() {
+        let orig_op = instrs[i].op;
+        instrs[i].op = match instrs[i].op {
+            Op::Nop => Op::Jmp,
+            Op::Jmp => Op::Nop,
+            _ => continue
+        };
+        if let Ok((acc, false)) = execute(instrs) {
+            return Ok((acc, i));
+        }
+        instrs[i].op = orig_op;
+    }
+    Err("None worked".to_string())
 }
 
 fn main() {
-    let prog = read_instrs("input.txt").unwrap();
-    match exec_until_loop(&prog) {
-        Ok(value) => println!("Accumulator {} before loop", value),
-        Err(errstr) => println!("Error! {}", errstr),
-    }
+    let mut prog = read_instrs("input.txt").unwrap();
+    let acc1 = exec_until_loop(&prog).unwrap();
+    println!("Accumulator {} before loop", acc1);
+    let (acc2, instr) = find_swapped_instr(&mut prog).unwrap();
+    println!("Accumulator {} after swapping instruction {}", acc2, instr);
 }
