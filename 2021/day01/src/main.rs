@@ -20,17 +20,32 @@ fn read_ints() -> BoxResult<Vec<i32>> {
     Ok(ints)
 }
 
-fn main() {
-    let ints = read_ints().unwrap();
+fn num_increases(ints: &Vec<i32>) -> i32 {
     let mut count = 0;
     let mut previous: Option<i32> = None;
     for int in ints {
         if let Some(prev_int) = previous {
-            if int > prev_int {
+            if *int > prev_int {
                 count += 1;
             }
         }
-        previous = Some(int);
+        previous = Some(*int);
     }
-    println!("{}", count);
+    count
+}
+
+fn num_3window_increases(ints: &Vec<i32>) -> i32 {
+    let mut count = 0;
+    for i in 3..ints.len() {
+        if ints[i] > ints[i-3] {
+            count += 1
+        }
+    }
+    count
+}
+
+fn main() {
+    let ints = read_ints().unwrap();
+    println!("Increases: {}", num_increases(&ints));
+    println!("3-window Increases: {}", num_3window_increases(&ints));
 }
