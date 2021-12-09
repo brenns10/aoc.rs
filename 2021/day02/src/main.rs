@@ -39,10 +39,11 @@ fn read_navigation() -> BoxResult<Vec<Navigation>> {
 struct Position {
     depth: i32,
     horiz: i32,
+    aim: i32,
 }
 
-fn do_navigation(instrs: Vec<Navigation>) -> Position {
-    let mut pos = Position{depth: 0, horiz: 0};
+fn do_navigation(instrs: &Vec<Navigation>) -> Position {
+    let mut pos = Position{depth: 0, horiz: 0, aim: 0};
 
     for instr in instrs {
         match instr.direction {
@@ -55,9 +56,31 @@ fn do_navigation(instrs: Vec<Navigation>) -> Position {
     pos
 }
 
+fn do_nav_with_aim(instrs: &Vec<Navigation>) -> Position {
+    let mut pos = Position{depth: 0, horiz: 0, aim: 0};
+
+    for instr in instrs {
+        match instr.direction {
+            Direction::Up => {pos.aim -= instr.amount},
+            Direction::Down => {pos.aim += instr.amount},
+            Direction::Forward => {
+                pos.horiz += instr.amount;
+                pos.depth += pos.aim * instr.amount;
+            },
+        }
+    }
+
+    pos
+}
+
 fn main() {
     let instrs = read_navigation().unwrap();
-    let nav_res = do_navigation(instrs);
+
+    let nav_res = do_navigation(&instrs);
+    println!("Final position: depth: {}, horiz: {}", nav_res.depth, nav_res.horiz);
+    println!("  product: {}", nav_res.depth * nav_res.horiz);
+
+    let nav_res = do_nav_with_aim(&instrs);
     println!("Final position: depth: {}, horiz: {}", nav_res.depth, nav_res.horiz);
     println!("  product: {}", nav_res.depth * nav_res.horiz);
 }
