@@ -34,6 +34,19 @@ enum RPSResult {
     Draw
 }
 
+impl TryFrom<&str> for RPSResult {
+    type Error = &'static str;
+
+    fn try_from(val: &str) -> Result<Self, Self::Error> {
+        match val {
+            "X" => Ok(Self::Lose),
+            "Y" => Ok(Self::Draw),
+            "Z" => Ok(Self::Win),
+            _ => Err("Invalid RPS result code"),
+        }
+    }
+}
+
 fn rps_outcome(mine: RPS, theirs: RPS) -> RPSResult {
     match (mine, theirs) {
         (a, b) if a == b => RPSResult::Draw,
@@ -72,8 +85,36 @@ fn read_guide() -> MyResult<Vec<(RPS, RPS)>> {
     Ok(res)
 }
 
+fn rps_pick(theirs: RPS, outcome: RPSResult) -> RPS {
+    match (theirs, outcome) {
+        (mv, RPSResult::Draw) => mv,
+        (RPS::Paper, RPSResult::Win) => RPS::Scissors,
+        (RPS::Scissors, RPSResult::Win) => RPS::Rock,
+        (RPS::Rock, RPSResult::Win) => RPS::Paper,
+        (RPS::Scissors, RPSResult:: Lose) => RPS::Paper,
+        (RPS::Rock, RPSResult::Lose) => RPS::Scissors,
+        (RPS::Paper, RPSResult::Lose) => RPS::Rock,
+    }
+}
+
+fn read_guide_fixed() -> MyResult<Vec<(RPS, RPSResult)>> {
+    let mut res: Vec<(RPS, RPSResult)> = Vec::new();
+    for line in io::BufReader::new(File::open("input.txt")?).lines() {
+        let line = line.unwrap();
+        let moves: Vec<&str> = line.split(" ").collect();
+        assert_eq!(moves.len(), 2);
+        let theirs = RPS::try_from(moves[0])?;
+        let outcome = RPSResult::try_from(moves[1])?;
+        res.push((theirs, outcome))
+    }
+    Ok(res)
+}
+
 fn main() {
     let guide = read_guide().unwrap();
     let total_score: u32 = guide.into_iter().map(|t| rps_score(t.0, t.1)).sum();
+    println!("Total score (wrong): {}", total_score);
+    let guide = read_guide_fixed().unwrap();
+    let total_score: u32 = guide.into_iter().map(|t| rps_score(rps_pick(t.0, t.1), t.0)).sum();
     println!("Total score: {}", total_score);
 }
