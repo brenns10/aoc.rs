@@ -31,7 +31,9 @@ fn get_elf_calories() -> MyResult<Vec<u32>> {
 }
 
 fn main() {
-    let cal_list = get_elf_calories().unwrap();
-    let max_cals = cal_list.into_iter().max().unwrap();
-    println!("Elf with maximum calories has: {}\n", max_cals);
+    let mut cal_list = get_elf_calories().unwrap();
+    cal_list.sort_by(|a, b| b.cmp(a));
+
+    println!("Elf with maximum calories has: {}", cal_list[0]);
+    println!("Top 3 elves have: {}", cal_list[0] + cal_list[1] + cal_list[2])
 }
