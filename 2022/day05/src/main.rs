@@ -82,9 +82,20 @@ fn exec_moves(stacks: &mut Stacks, moves: &Vec<Move>) {
     }
 }
 
+fn exec_moves_9001(stacks: &mut Stacks, moves: &Vec<Move>) {
+    for mov in moves {
+        let from_stack = &mut stacks[mov.from - 1];
+        let mut stack: Vec<u8> = from_stack.drain(from_stack.len() - mov.count..).collect();
+        stacks[mov.to - 1].append(&mut stack);
+    }
+}
+
 fn main() {
     let (mut stacks, moves): (Stacks, Vec<Move>) = read_input();
+    let mut stacks_9001 = stacks.clone();
     println!("Stacks start with top reading: {}", read_boxes(&stacks));
     exec_moves(&mut stacks, &moves);
-    println!("Current top reading: {}", read_boxes(&stacks));
+    println!("Top reading as 9000: {}", read_boxes(&stacks));
+    exec_moves_9001(&mut stacks_9001, &moves);
+    println!("Top reading as 9001: {}", read_boxes(&stacks_9001));
 }
