@@ -5,37 +5,7 @@ use std::vec::Vec;
 //use std::str;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
-
-fn read_rucksacks() -> MyResult<Vec<(Vec<u8>, Vec<u8>)>> {
-    let mut rucksacks: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
-    for line in io::BufReader::new(File::open("input.txt")?).lines() {
-        let mut all_items: Vec<u8> = Vec::from(line?);
-        let mut second_compartment = all_items.split_off(all_items.len() / 2);
-        all_items.sort();
-        second_compartment.sort();
-        rucksacks.push((all_items, second_compartment));
-    }
-    Ok(rucksacks)
-}
-
-/* Given two compartments, find the item present in both */
-fn common_piece(lhs: Vec<u8>, rhs: Vec<u8>) -> Option<u8> {
-    //println!("{} {}", str::from_utf8(&lhs).unwrap(), str::from_utf8(&rhs).unwrap());
-    let lhs_iter = &mut lhs.into_iter();
-    let rhs_iter = &mut rhs.into_iter();
-
-    let mut lhs_val = lhs_iter.next()?;
-    let mut rhs_val = rhs_iter.next()?;
-    while lhs_val != rhs_val {
-        if lhs_val < rhs_val {
-            lhs_val = lhs_iter.next()?;
-        } else {
-            rhs_val = rhs_iter.next()?;
-        }
-    }
-    //println!("{}", lhs_val as char);
-    Some(lhs_val)
-}
+type Rucksack = [u8; 52];
 
 fn priority(item: u8) -> MyResult<u32> {
     if b'a' <= item && item <= b'z' {
@@ -47,8 +17,58 @@ fn priority(item: u8) -> MyResult<u32> {
     }
 }
 
+fn read_rucksacks() -> MyResult<Vec<(Rucksack, Rucksack)>> {
+    let mut rucksacks: Vec<(Rucksack, Rucksack)> = Vec::new();
+    for line in io::BufReader::new(File::open("input.txt")?).split(b'\n') {
+        let line = line?;
+        assert_eq!(line.len() % 2, 0);
+        let halfway = line.len() / 2;
+        let mut lhs: Rucksack = [0; 52];
+        let mut rhs: Rucksack = [0; 52];
+        for (i, code) in line.into_iter().enumerate() {
+            let idx = (priority(code)? - 1) as usize;
+            if i < halfway {
+                lhs[idx] += 1;
+            } else {
+                rhs[idx] += 1;
+            }
+        }
+        rucksacks.push((lhs, rhs))
+    }
+    Ok(rucksacks)
+}
+
+/* Given two compartments, find the item present in both */
+fn common_piece(args: &[&Rucksack]) -> Option<u32> {
+    for idx in 0..52 {
+        if args.iter().all(|v| v[idx] > 0) {
+            return Some((idx + 1) as u32);
+        }
+    }
+    None
+}
+
+fn combine(rhs: &Rucksack, lhs: &Rucksack) -> Rucksack {
+    let mut new: Rucksack = [0; 52];
+    for idx in 0..52 {
+        new[idx] += rhs[idx] + lhs[idx];
+    }
+    new
+}
+
 fn main() {
     let rucksacks = read_rucksacks().unwrap();
-    let total: u32 = rucksacks.into_iter().map(|t| priority(common_piece(t.0, t.1).unwrap()).unwrap()).sum();
+    let total: u32 = rucksacks.iter().map(|r| common_piece(&[&r.0, &r.1]).unwrap()).sum();
     println!("Sum of common item priorities: {}", total);
+
+    assert_eq!(0, rucksacks.len() % 3);
+    let mut total_prio = 0;
+    for i in 0..rucksacks.len() / 3 {
+        total_prio += common_piece(&[
+            &combine(&rucksacks[i * 3].0, &rucksacks[i * 3].1),
+            &combine(&rucksacks[i * 3 + 1].0, &rucksacks[i * 3 + 1].1),
+            &combine(&rucksacks[i * 3 + 2].0, &rucksacks[i * 3 + 2].1),
+        ]).unwrap();
+    }
+    println!("Sum of group priorities: {}", total_prio);
 }
