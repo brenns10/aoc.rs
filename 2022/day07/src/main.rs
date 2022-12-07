@@ -59,6 +59,7 @@ fn read_directory_input() -> Directory {
     lines.next().unwrap().unwrap();
     root.name += "/";
     root.local_size = read_directory_files(&mut lines, &mut root.files);
+    root.total_size = root.local_size;
 
     let mut dir_stack: Vec<Directory> = Vec::new();
     dir_stack.push(root);
@@ -95,7 +96,7 @@ fn read_directory_input() -> Directory {
         this_dir.total_size = this_dir.local_size;
         dir_stack.push(this_dir);
     }
-    while dir_stack.len() >= 2 {
+    while dir_stack.len() > 1 {
         let cwd = dir_stack.pop().unwrap();
         let mut parent = dir_stack.last_mut().unwrap();
         if cwd.total_size <= 100000 {
@@ -108,6 +109,33 @@ fn read_directory_input() -> Directory {
     dir_stack.pop().unwrap()
 }
 
+fn find_dir_to_delete(root: &Directory) {
+    const TOTAL_FS_SIZE: usize = 70000000;
+    const NEEDED_SIZE: usize = 30000000;
+    let amount_to_free: usize = NEEDED_SIZE - (TOTAL_FS_SIZE - root.total_size);
+    let mut smallest_dir_size: usize = TOTAL_FS_SIZE;
+    let mut stack: Vec<&Directory> = Vec::new();
+    stack.push(&root);
+    println!("Filesystem capacity is {}", TOTAL_FS_SIZE);
+    println!("Filesystem size is     {}", root.total_size);
+    println!("Need at least          {}", NEEDED_SIZE);
+    println!("Free capacity is       {}", TOTAL_FS_SIZE - root.total_size);
+    println!("Must free              {}", amount_to_free);
+    while !stack.is_empty() {
+        let dir = stack.pop().unwrap();
+        println!("{} {} - {} {}", "  ".repeat(stack.len()), dir.name, dir.total_size, dir.local_size);
+        if dir.total_size >= amount_to_free && dir.total_size < smallest_dir_size {
+            println!("{} ->Dir would free {}", "  ".repeat(stack.len()), dir.total_size);
+            smallest_dir_size = dir.total_size;
+        }
+        for child in dir.subdirs.iter() {
+            stack.push(child);
+        }
+    }
+    println!("Directory with smallest size to free up space: {}", smallest_dir_size);
+}
+
 fn main() {
-    read_directory_input();
+    let root = read_directory_input();
+    find_dir_to_delete(&root);
 }
