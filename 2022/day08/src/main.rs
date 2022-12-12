@@ -73,9 +73,40 @@ fn count_visible_trees(arr: &RectArray) -> usize {
     visible.len()
 }
 
+fn do_scenic<I>(iter: I, arr: &RectArray, from_height: u8) -> usize
+  where I: Iterator<Item = (usize, usize)>
+{
+    let mut count = 0;
+    for (row, col) in iter {
+        let val = arr.get(row, col);
+        count += 1;
+        if val >= from_height {
+            break
+        }
+    }
+    count
+}
+
+fn scenic_score(row: usize, col: usize, arr: &RectArray) -> usize {
+    let height = arr.get(row, col);
+    let up = do_scenic((0..row).rev().map(|v| (v, col)), &arr, height);
+    let down = do_scenic((row+1..arr.rows()).map(|v| (v, col)), &arr, height);
+    let left = do_scenic((0..col).rev().map(|v| (row, v)), &arr, height);
+    let right = do_scenic((col+1..arr.cols).map(|v| (row, v)), &arr, height);
+    up * down * left * right
+}
+
+fn max_scenic_score(arr: &RectArray) -> usize {
+    (0..arr.arr.len())
+        .map(|v| scenic_score(v / arr.cols, v % arr.cols, arr))
+        .max()
+        .unwrap()
+}
+
 fn main() {
     let arr = RectArray::from_file().unwrap();
     let len = count_visible_trees(&arr);
-    println!("Array of rows, cols: {}, {}", arr.rows(), arr.cols);
     println!("Number of visible trees: {}", len);
+    let max_ss = max_scenic_score(&arr);
+    println!("Max scenic_score: {}", max_ss);
 }
