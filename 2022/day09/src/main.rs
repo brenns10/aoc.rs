@@ -35,13 +35,12 @@ fn update_tail(head: Coord, tail: Coord) -> Coord {
     tail
 }
 
-fn do_sim() -> MyResult<()> {
+fn do_sim(rope_count: usize) -> MyResult<()> {
     let file = File::open("input.txt")?;
     let reader = io::BufReader::new(file);
-    let mut head: Coord = (0, 0);
-    let mut tail: Coord = (0, 0);
+    let mut rope: Vec<Coord> = (0..rope_count).map(|_| (0, 0)).collect();
     let mut positions: HashSet<Coord> = HashSet::new();
-    positions.insert(tail);
+    positions.insert(*rope.last().unwrap());
     for line in reader.lines() {
         let line = line?;
         let tokens: Vec<&str> = line.split_whitespace().collect();
@@ -49,11 +48,16 @@ fn do_sim() -> MyResult<()> {
             return Err("Bad input line".into());
         }
         let dir = direction(tokens[0])?;
-        let count = u32::from_str_radix(tokens[1], 10)?;
-        for _ in 0..count {
-            head = (head.0 + dir.0, head.1 + dir.1);
-            tail = update_tail(head, tail);
-            positions.insert(tail);
+        let move_count = u32::from_str_radix(tokens[1], 10)?;
+        for _ in 0..move_count {
+            // Move the head of the rope
+            rope[0] = (rope[0].0 + dir.0, rope[0].1 + dir.1);
+            // Move the rest of the rope
+            for i in 1..rope_count {
+                rope[i] = update_tail(rope[i-1], rope[i]);
+            }
+            // Track the rope
+            positions.insert(*rope.last().unwrap());
         }
     }
     println!("Tail unique positions: {}", positions.len());
@@ -61,5 +65,8 @@ fn do_sim() -> MyResult<()> {
 }
 
 fn main() {
-    do_sim().unwrap();
+    println!("Doing simulation of 2 knots:");
+    do_sim(2).unwrap();
+    println!("Doing simulation of 10 knots:");
+    do_sim(10).unwrap();
 }
