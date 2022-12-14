@@ -113,26 +113,35 @@ impl<T> RectArray<T>
     }
 }
 
-fn do_shortest_path(topo: &RectArray<u8>) -> Option<usize> {
+fn do_shortest_path<F1, F2>(
+    topo: &RectArray<u8>,
+    start: Coord,
+    test: F1,
+    term: F2,
+    print: bool,
+) -> Option<usize>
+    where F1: Fn(u8, u8) -> bool,
+          F2: Fn(Coord) -> bool,
+{
     let mut q: VecDeque<Coord> = VecDeque::new();
     let mut paths: RectArray<Option<usize>> = RectArray::new(topo.rows(), topo.cols, None);
-    paths.set(topo.start, Some(0));
-    q.push_back(topo.start);
+    paths.set(start, Some(0));
+    q.push_back(start);
 
     let mut prev_len = 0;
     while !q.is_empty() {
         let cur = q.pop_front().unwrap();
         let height = *topo.get(cur);
         let len = paths.get(cur).unwrap();
-        if len != prev_len {
+        if len != prev_len && print {
             print_path_arr(&paths, len);
             prev_len = len;
         }
-        if cur == topo.end {
+        if term(cur) {
             return Some(len)
         }
         for step in cur.adjacent(topo) {
-            if *topo.get(step) > height + 1 {
+            if test(*topo.get(step), height) {
                 continue;
             }
             if let None = paths.get(step) {
@@ -163,6 +172,20 @@ fn print_path_arr(paths: &RectArray<Option<usize>>, cur: usize) {
 
 fn main() {
     let topo = RectArray::from_topo_map("input.txt").unwrap();
-    let shortest = do_shortest_path(&topo).unwrap();
+    let shortest = do_shortest_path(
+        &topo,
+        topo.start,
+        |nh, ch| nh > ch + 1,
+        |c| (c == topo.end),
+        false,
+    ).unwrap();
     println!("Shortest path from start to end: {}", shortest);
+    let shortest = do_shortest_path(
+        &topo,
+        topo.end,
+        |nh, ch| ch > nh + 1,
+        |c| (*topo.get(c) == 0),
+        true,
+    ).unwrap();
+    println!("Shortest path from end to any ground: {}", shortest);
 }
