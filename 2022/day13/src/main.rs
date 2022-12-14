@@ -6,7 +6,7 @@ use std::io::Read;
 
 type MyResult<T> = Result<T,Box<dyn Error>>;
 
-#[derive(Eq)]
+#[derive(Eq, Clone)]
 enum Data {
     Integer(i32),
     List(Vec<Data>),
@@ -103,12 +103,18 @@ impl Ord for Data {
     }
 }
 
+fn signal(val: i32) -> Data {
+    use Data::*;
+    List(vec![List(vec![Integer(val)])])
+}
+
 fn main() {
     let mut f = File::open("input.txt").unwrap();
     let mut s = String::new();
     let mut sum = 0;
     f.read_to_string(&mut s).unwrap();
 
+    let mut data: Vec<Data> = Vec::new();
     for (i, grp) in s.split("\n\n").enumerate() {
         let lines: Vec<&str> = grp.split("\n").collect();
         let data_left = Data::from_str(lines[0]).unwrap();
@@ -116,7 +122,17 @@ fn main() {
         if data_left < data_right {
             sum += i + 1;
         }
+        data.push(data_left);
+        data.push(data_right);
     }
-
     println!("Sum of correctly ordered indices: {}", sum);
+
+    let signal_2 = signal(2);
+    data.push(signal_2.clone());
+    let signal_6 = signal(6);
+    data.push(signal_6.clone());
+    data.sort();
+    let idx2 = data.binary_search(&signal_2).unwrap() + 1;
+    let idx6 = data.binary_search(&signal_6).unwrap() + 1;
+    println!("Decoder key: {}", idx2 * idx6);
 }
