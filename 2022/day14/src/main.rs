@@ -134,7 +134,7 @@ fn print_cave(arr: &RectArray<CaveBlock>) {
     }
 }
 
-fn drop_sand(arr: &mut RectArray<CaveBlock>) -> bool {
+fn drop_sand(arr: &mut RectArray<CaveBlock>, floor: bool) -> bool {
     use CaveBlock::*;
     let mut coord = Coord{x: 500, y: 0};
 
@@ -154,8 +154,18 @@ fn drop_sand(arr: &mut RectArray<CaveBlock>) -> bool {
             coord = below_right;
             continue;
         }
-        arr.set(&coord, Sand);
-        return true;
+        if let Air = arr.get(&coord) {
+            arr.set(&coord, Sand);
+           return true;
+        } else {
+            return false;
+        }
+    }
+    if floor {
+        if let Air = arr.get(&coord) {
+            arr.set(&coord, Sand);
+            return true;
+        }
     }
     false
 }
@@ -164,6 +174,7 @@ fn main() {
     let file = File::open("input.txt").unwrap();
     let reader = io::BufReader::new(file);
     let verbose = false;
+    let more_verbose = false;
     let paths: Vec<Vec<Coord>> = reader
         .lines()
         .map(|l| l.unwrap().split(" -> ")
@@ -171,20 +182,35 @@ fn main() {
                            .collect::<MyResult<Vec<Coord>>>().unwrap())
         .collect();
 
-    let (x_range, mut y_range) = find_ranges(&paths);
+    let (mut x_range, mut y_range) = find_ranges(&paths);
     if y_range.start > 0 {
         y_range.start = 0
     }
+    y_range.end += 1;
+    // Add enough space to have a full pile on etiher side
+    x_range.start -= y_range.len() as isize;
+    x_range.end += y_range.len() as isize;
     let mut cave = RectArray::new_ranged(&x_range, &y_range, &CaveBlock::Air);
     draw_paths(&paths, &mut cave);
     let mut settled = 0;
     if verbose { print_cave(&cave); }
-    while drop_sand(&mut cave) {
+    while drop_sand(&mut cave, false) {
         settled += 1;
-        if verbose {
+        if verbose && settled % 10 == 0 {
             thread::sleep(Duration::from_millis(50));
             print_cave(&cave);
         }
     }
-    println!("Cave has {} settled sand blocks", settled);
+    println!("Cave has {} settled sand blocks before sand falls into the void (ground)", settled);
+    while drop_sand(&mut cave, true) {
+        settled += 1;
+        if more_verbose && settled % 1000 == 0 {
+            thread::sleep(Duration::from_millis(50));
+            print_cave(&cave);
+        }
+    }
+    if more_verbose {
+        print_cave(&cave);
+    }
+    println!("Cave has {} settled sand blocks before the source is plugged", settled);
 }
