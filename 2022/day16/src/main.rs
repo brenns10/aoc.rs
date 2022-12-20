@@ -102,44 +102,55 @@ fn closed_set_string(closed: &HashSet<String>) -> String {
     v.join("")
 }
 
+fn best_opt(a: Option<(u32, Vec<String>)>, b: Option<(u32, Vec<String>)>) -> Option<(u32, Vec<String>)> {
+    if let (Some(ta), Some(tb)) = (&a, &b) {
+        if ta.0 >= tb.0 {
+            a
+        } else {
+            b
+        }
+    } else {
+        a.or(b)
+    }
+}
+
 fn best_choice_rec(start: &str, minutes_remain: u32, graph: &HashMap<String, Valve>, closed: &HashSet<String>,
-                   memoize: &mut HashMap<(String, String, u32), (u32, Vec<String>)>, depth: u32) -> (u32, Vec<String>) {
+                   memoize: &mut HashMap<(String, String, u32, u32), (u32, Vec<String>)>, tries: u32) -> (u32, Vec<String>) {
     let mut best: Option<(u32, Vec<String>)> = None;
-    let key = (closed_set_string(closed), String::from(start), minutes_remain);
+    let key = (closed_set_string(closed), String::from(start), minutes_remain, tries);
     if let Some(val) = memoize.get(&key) {
         return val.clone();
     }
-    //let pfx = " ".repeat(depth as usize);
-    //println!("{}Finding best choice: {} minutes at {}", pfx, minutes_remain, start);
     for (next, max_score, minutes) in all_choices(start, minutes_remain, graph, closed) {
-        //println!("{}Option: {}, {} minutes away", pfx, next, minutes);
         let next_rem = minutes_remain - 1 - minutes;
         let mut closed_next = closed.clone();
         closed_next.insert(next.clone());
-        let ( mut score, mut moves) = best_choice_rec(&next, next_rem, graph, &closed_next, memoize, depth + 1);
+        let ( mut score, mut moves) = best_choice_rec(&next, next_rem, graph, &closed_next, memoize, tries);
         score += max_score;
         moves.insert(0, next.clone());
-        best = match best {
-            None => Some((score, moves)),
-            Some((other_score, other_moves)) => {
-                if score > other_score {
-                    Some((score, moves))
-                } else {
-                    Some((other_score, other_moves))
-                }
-            }
-        }
+        best = best_opt(best, Some((score, moves)));
+    }
+    if tries > 0 {
+        best = best_opt(
+            best,
+            Some(best_choice_rec("AA", 26, graph, closed, memoize, tries - 1)),
+        )
     }
     let best = best.unwrap_or((0, Vec::new()));
     memoize.insert(key, best.clone());
-    //println!("{}Best choice was: {:?}", pfx, best.1);
     best
 }
 
 fn best_choice(graph: &HashMap<String, Valve>) -> (u32, Vec<String>) {
     let closed: HashSet<String> = HashSet::new();
-    let mut memoize: HashMap<(String, String, u32), (u32, Vec<String>)> = HashMap::new();
+    let mut memoize: HashMap<(String, String, u32, u32), (u32, Vec<String>)> = HashMap::new();
     best_choice_rec("AA", 30, graph, &closed, &mut memoize, 0)
+}
+
+fn best_choice_with_elephant(graph: &HashMap<String, Valve>) -> (u32, Vec<String>) {
+    let closed: HashSet<String> = HashSet::new();
+    let mut memoize: HashMap<(String, String, u32, u32), (u32, Vec<String>)> = HashMap::new();
+    best_choice_rec("AA", 26, graph, &closed, &mut memoize, 1)
 }
 
 fn main() {
@@ -153,4 +164,8 @@ fn main() {
     let (score, sequence) = best_choice(&valves);
     println!("Max score: {}", score);
     println!("Sequence: {:?}", sequence);
+
+    let (score, sequence) = best_choice_with_elephant(&valves);
+    println!("W/ Elephant, Max Score: {}", score);
+    println!("W/ Elephant, Sequence: {:?}", sequence);
 }
