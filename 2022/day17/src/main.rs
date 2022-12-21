@@ -126,6 +126,13 @@ fn fall_until(jets: &Vec<Dir>, until: usize) -> usize {
     let mut jet_index = 0;
     let mut cave = Cave::new(7);
 
+    let cycle_len = jets.len() * SHAPES.len();
+    let mut cycle: Vec<(isize, usize)> = Vec::new();
+    let mut prev_cycle: Option<Vec<(isize, usize)>> = None;
+    let mut top = 0;
+    let mut prev_top = 0;
+    let mut prev_fallen = 0;
+
     /* To start, position the shape 3 blocks above and 2 right */
     add(&cave, &mut falling, 2, 3).ok();
 
@@ -135,6 +142,33 @@ fn fall_until(jets: &Vec<Dir>, until: usize) -> usize {
             Dir::Left => add(&cave, &mut falling, -1, 0).ok(),
             Dir::Right => add(&cave, &mut falling, 1, 0).ok(),
         };
+
+        cycle.push((top - prev_top, fallen - prev_fallen));
+        if cycle.len() == cycle_len {
+            match prev_cycle {
+                Some(prev_vec) if prev_vec == cycle => {
+                    println!("Found pattern!");
+                    let fallen_per_cycle = fallen - prev_fallen;
+                    let blocks_per_cycle = top - prev_top;
+                    let full_cycles = (until - fallen) / fallen_per_cycle;
+                    let fallen_target = (until - fallen) % fallen_per_cycle;
+                    let blocks_full_cycle = top + blocks_per_cycle * full_cycles as isize;
+                    for i in 0..cycle_len {
+                        if cycle[i].1 == fallen_target {
+                            return (blocks_full_cycle + cycle[i].0) as usize + 1;
+                        }
+                    }
+                    panic!("Should have found an answer.");
+                },
+                _ => {
+                    println!("Ran for cycle with no pattern");
+                    prev_cycle = Some(cycle);
+                    cycle = Vec::with_capacity(cycle_len);
+                    prev_top = top;
+                    prev_fallen = fallen;
+                }
+            }
+        }
         jet_index = (jet_index + 1) % jets.len();
 
         /* Next, move the block down. If the move is impossible, generate new block */
@@ -148,6 +182,7 @@ fn fall_until(jets: &Vec<Dir>, until: usize) -> usize {
             shape_index = (shape_index + 1) % SHAPES.len();
             add(&cave, &mut falling, 2, cave.top_rock().unwrap().y + 4).unwrap();
             fallen += 1;
+            top = cave.top_rock().unwrap().y;
         }
     }
 
@@ -163,4 +198,8 @@ fn main() {
     let jets = read_input(filename).unwrap();
     let height = fall_until(&jets, 2022);
     println!("After block 2022, block height is {}", height);
+
+    println!("The input length is {}, and the shape cycle length is {}", jets.len(), SHAPES.len());
+    let height = fall_until(&jets, 1000000000000);
+    println!("After block 1 trillion, block height is {}", height);
 }
