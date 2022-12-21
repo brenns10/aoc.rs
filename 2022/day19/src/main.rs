@@ -142,14 +142,14 @@ fn maximize_geodes_rec(bp: &Blueprint, bpc: &BlueprintCorollary, state: &State) 
     }
 }
 
-fn maximize_geodes(bp: &Blueprint) -> u32 {
+fn maximize_geodes(bp: &Blueprint, minutes: u32) -> u32 {
     let bpc = BlueprintCorollary{
         max_ore_bots: bp.clay_bot_cost_ore.max(bp.obsidian_bot_cost_ore.max(bp.geode_bot_cost_ore)),
         max_clay_bots: bp.obsidian_bot_cost_clay,
         max_obsidian_bots: bp.geode_bot_cost_obsidian,
     };
     maximize_geodes_rec(bp, &bpc, &State{
-        minute: 24,
+        minute: minutes,
         ore: 0,
         clay: 0,
         obsidian: 0,
@@ -171,10 +171,18 @@ fn main() {
     let mut total_quality = 0;
     for (i, bp) in bps.iter().enumerate() {
         let i = i + 1;
-        let geodes = maximize_geodes(bp);
+        let geodes = maximize_geodes(bp, 24);
         let quality = i * geodes as usize;
         total_quality += quality;
-        println!("[{}]: max geodes: {} quality: {}", i, geodes, quality);
+        println!("[{}]: max geodes (24min): {} quality: {}", i, geodes, quality);
     }
     println!("Total quality: {}", total_quality);
+
+    let mut product = 1;
+    for i in 0..3 {
+        let geodes = maximize_geodes(&bps[i], 32);
+        println!("[{}]: max geodes (32min): {}", i + 1, geodes);
+        product *= geodes;
+    }
+    println!("For the first 3 blueprints, product of the 32-minute geode quantities is: {}", product);
 }
