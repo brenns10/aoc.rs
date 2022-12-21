@@ -75,6 +75,15 @@ fn find_coords(file: &Vec<(isize, usize)>) {
     println!("Error, couldn't find 0")
 }
 
+fn decrypt(file: &mut Vec<(isize, usize)>, key: isize, rounds: usize) {
+    for val in file.iter_mut() {
+        val.0 = val.0 * key;
+    }
+    for _ in 0..rounds {
+        do_mix(file, false);
+    }
+}
+
 fn main() {
     let mut filename = "input.txt";
     let mut verbose = false;
@@ -84,10 +93,15 @@ fn main() {
         verbose = true;
     }
     let mut file = read_input(filename).unwrap();
+    let mut part2 = file.clone();
     if verbose {
         println!("Original arrangement:");
         print_arr(&file);
     }
     do_mix(&mut file, verbose);
     find_coords(&file);
+
+    println!("Doing part 2 decryption!");
+    decrypt(&mut part2, 811589153, 10);
+    find_coords(&part2);
 }
