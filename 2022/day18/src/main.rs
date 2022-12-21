@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
@@ -50,6 +50,61 @@ const ADJACENT: &[C3D] = &[
     C3D(-1, 0, 0),
 ];
 
+fn is_external(c: C3D, points: &HashSet<C3D>, internal: &mut HashSet<C3D>, external: &mut HashSet<C3D>) -> bool {
+    if points.contains(&c) {
+        panic!("Should not be called on a point in the set.")
+    }
+    let mut seen: HashSet<_> = HashSet::new();
+    let mut q: VecDeque<_> = VecDeque::new();
+    q.push_front(c);
+    seen.insert(c);
+    let mut count = 0;
+    while !q.is_empty() && count < points.len() {
+        let c = q.pop_back().unwrap();
+        count += 1;
+        if external.contains(&c) {
+            external.extend(seen);
+            return true;
+        }
+        if internal.contains(&c) {
+            internal.extend(seen);
+            return false;
+        }
+        for dir in ADJACENT {
+            let next = c + *dir;
+            if !seen.contains(&next) && !points.contains(&next) {
+                q.push_front(next);
+                seen.insert(next);
+            }
+        }
+    }
+    /* It is impossible for N points to enclose N other points. */
+    if count >= points.len() {
+        external.extend(seen);
+        true
+    } else {
+        internal.extend(seen);
+        false
+    }
+}
+
+fn external_surface_area(points: &HashSet<C3D>) -> u32 {
+    let mut internal: HashSet<C3D> = HashSet::new();
+    let mut external: HashSet<C3D> = HashSet::new();
+
+    let mut sa = 0;
+
+    for c in points.iter() {
+        for dir in ADJACENT {
+            let adj = *c + *dir;
+            if !points.contains(&adj) && is_external(adj, points, &mut internal, &mut external) {
+                sa += 1;
+            }
+        }
+    }
+    sa
+}
+
 fn main() {
     let input = read_input("input.txt").unwrap();
     let input: HashSet<_> = input.iter().map(|v| *v).collect();
@@ -63,4 +118,5 @@ fn main() {
         }
     }
     println!("Surface area: {}", uncovered);
+    println!("Extarnal surface area: {}", external_surface_area(&input));
 }
