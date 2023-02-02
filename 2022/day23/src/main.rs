@@ -170,5 +170,15 @@ fn main() {
         print_map(&map);
     }
     let empty = count_empty(&map);
-    println!("At the end, {empty} squares were empty in minimal rectangle.");
+    println!("After 10 rounds, {empty} squares were empty in minimal rectangle.");
+
+    let mut i = 10;
+    loop {
+        let moved = do_turn(&mut map, i);
+        i += 1;
+        if moved == 0 {
+            break;
+        }
+    }
+    println!("After {i} rounds, no more moves were made.");
 }
