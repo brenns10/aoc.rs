@@ -167,14 +167,21 @@ impl Map {
     }
 }
 
-fn do_search(states: &Vec<Map>, verbose: bool) -> usize {
-    let start = C2D(-1, states[0].start_col as isize);
-    let end = C2D(states[0].height as isize, states[0].end_col as isize);
+fn do_search(states: &Vec<Map>, start_time: usize, reverse: bool, verbose: bool) -> usize {
+    let mut start = C2D(-1, states[0].start_col as isize);
+    let mut end = C2D(states[0].height as isize, states[0].end_col as isize);
+    let mut initdir = CDOWN;
+    if reverse {
+        let tmp = start;
+        start = end;
+        end = tmp;
+        initdir = CUP;
+    }
 
     let mut cur: HashSet<C2D> = HashSet::new();
     cur.insert(start);
 
-    let mut time = 0;
+    let mut time = start_time;
     loop {
         let mut next: HashSet<C2D> = HashSet::new();
         time += 1;
@@ -185,12 +192,12 @@ fn do_search(states: &Vec<Map>, verbose: bool) -> usize {
         let next_map = &states[time % states.len()];
 
         for coord in cur {
-            if coord.0 < 0 {
-                // Oops, starting position, can only move down or wait
+            if coord == start {
+                // Oops, starting position, can only move in initial dir
                 next.insert(coord);
-                let down = coord + CDOWN;
-                if next_map.get(&down) == 0 {
-                    next.insert(coord + CDOWN);
+                let initstep = coord + initdir;
+                if next_map.get(&initstep) == 0 {
+                    next.insert(coord + initdir);
                 }
             } else {
                 // Ok, try to move any direction
@@ -250,6 +257,10 @@ fn main() {
      * possible paths at once, in lockstep, synchronized by the current time.
      * The first one which can come up with the solution is the winner.
      */
-    let time = do_search(&steps, verbose);
+    let time = do_search(&steps, 0, false, verbose);
     println!("Minimum time: {}", time);
+    let back = do_search(&steps, time, true, verbose);
+    println!("Time to go back: {}", back);
+    let out = do_search(&steps, back, false, verbose);
+    println!("Time to get out again: {}", out);
 }
