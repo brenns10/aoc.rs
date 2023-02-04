@@ -246,12 +246,13 @@ impl Map {
         }
         coord.0 as usize + coord.1 as usize * self.width
     }
-    fn read_string(s: &str, edgesize: isize) -> MyResult<Map> {
+    fn read_string(s: &str) -> MyResult<Map> {
         let lines: Vec<_> = s.lines().collect();
         let width = lines.iter().map(|s| s.len()).max().unwrap();
         let height = lines.len();
         let arr: Vec<Cell> = iter::repeat(Cell::Offmap).take(width * height).collect();
-        let mut map = Map{arr, width, height, start: C2D(0, 0), edgesize};
+        let mut map = Map{arr, width, height, start: C2D(0, 0), edgesize: 0};
+        let mut count_spaces = 0;
         let mut first = true;
         for (y, line) in lines.iter().enumerate() {
             for (i, c) in line.chars().enumerate() {
@@ -261,6 +262,7 @@ impl Map {
                     '#' => Cell::Wall,
                     _ => return Err("invalid char".into()),
                 };
+                count_spaces += 1;
                 let coord = C2D(i as isize, y as isize);
                 if first && cell == Cell::Open {
                     map.start = coord;
@@ -270,6 +272,12 @@ impl Map {
                 map.arr[ix] = cell;
             }
         }
+        /* We now need to determine this cube's edge size. */
+        let edge_size = ((count_spaces / 6) as f64).sqrt() as isize;
+        if edge_size * edge_size * 6 != count_spaces {
+            return Err("This map is not a cube!".into())
+        }
+        map.edgesize = edge_size;
         Ok(map)
     }
     fn get(&self, coord: &C2D) -> Cell {
@@ -355,13 +363,13 @@ enum Instruction {
     Move(usize),
 }
 
-fn read_input(filename: &str, edgesize: isize) -> MyResult<(Map, Vec<Instruction>)> {
+fn read_input(filename: &str) -> MyResult<(Map, Vec<Instruction>)> {
     let mut reader = File::open(filename)?;
     let mut contents = String::new();
     reader.read_to_string(&mut contents)?;
 
     let (map, inst) = contents.split_once("\n\n").ok_or_else(|| "Bad map separation")?;
-    let mapval = Map::read_string(map, edgesize)?;
+    let mapval = Map::read_string(map)?;
     let expr = Regex::new(r"(\d+)|L|R")?;
     let mut instrs = Vec::new();
     for v in expr.find_iter(inst) {
@@ -411,15 +419,13 @@ fn do_path(map: &Map, instrs: &Vec<Instruction>, cube: bool, verbose: bool) {
 
 fn main() {
     let mut filename = "input.txt";
-    let mut edgesize = 50;
     let mut verbose = false;
     let args: Vec<_> = env::args().collect();
     if args.len() >= 2 {
         filename = &args[1];
-        edgesize = 4;
         verbose = true;
     }
-    let (map, instrs) = read_input(filename, edgesize).unwrap();
+    let (map, instrs) = read_input(filename).unwrap();
     do_path(&map, &instrs, false, false);
     do_path(&map, &instrs, true, verbose);
 }
