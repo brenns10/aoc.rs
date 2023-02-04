@@ -179,15 +179,18 @@ impl Map {
  * translation of edges. Rolling the cube left and right similarly produces a
  * set of complementary edge transitions.
  *
- * Now also imagine that we measure an "offset" of your location: the offset is
- * measured in distance from the top (for vertical edges), distance from the
- * leftmost side (for horizontal edges), or distance from the side closest from
- * the paper (for edges on the axis we that are looking down). Some transitions
- * will require that the offset be "negated" to conform to the new perspective.
+ * Now also imagine that we measure an "offset" which is the location along the
+ * edge: the offset is measured in distance from the top (for vertical edges),
+ * distance from the leftmost side (for horizontal edges), or distance from the
+ * side closest from the paper (for edges on the axis we that are looking down).
+ * Some transitions will require that the offset be "negated" to conform to the
+ * new perspective.
  *
  * Below, we have two sets of translations. The first is for up/down and the
  * second is for right/left. The translations are represented as tuples:
- * (original edge, new edge, needs_negation)
+ * (original edge, new edge, needs_negation). They are written in one direction
+ * only, but the reverse direction is (new edge, original edge, needs_negation).
+ * So they can be used in both situations.
  *
  * With these translations, we can essentially move along the unfolded cube, and
  * keep track of where we are on it. Once we are back on a edge which is on the
@@ -262,7 +265,8 @@ fn edge_to_facing(edge: u8) -> usize {
 }
 
 /// Given an edge on the bottom face of the cube, and a coordinate, return the
-/// offset.
+/// offset. The offset is what we'll actually keep track of as we roll the cube
+/// around in search of the new coordinate.
 fn edge_offset(edge: u8, coord: C2D, edgesize: isize) -> isize {
     /* Only valid for edges 1-4, convert the coordinate to an offset given an
      * edge. */
@@ -274,8 +278,8 @@ fn edge_offset(edge: u8, coord: C2D, edgesize: isize) -> isize {
     }
 }
 
-/// Given an edge and a direction we're traveling with the cube, return the new
-/// edge number and a flag true if we need to negate the offset.
+/// Given an edge and a direction we're rolling the cube, return the new edge
+/// number and a flag true if we need to negate the offset.
 fn edge_transition(edge: u8, roll: usize) -> (u8, bool) {
     let reg = !(roll == 1 || roll == 2);
     let arr = if roll % 2 == 1 { UP_DOWN_TRANS } else { RIGHT_LEFT_TRANS };
@@ -291,10 +295,14 @@ fn edge_transition(edge: u8, roll: usize) -> (u8, bool) {
 }
 
 /// Step off the map, assuming it's a cube. This implements one possible "step
-/// strategy". The algorithm is basically a BFS. We determine which edge of the
-/// cube we're on, and then "roll" the cube around until we find a new section
-/// of the map where the same edge is also on the bottom. Then we make the
-/// necessary translation back into a coordinate and facing direction.
+/// strategy". See the above CUBE GEOMETRY comment for a full description of
+/// what edge numbers are, how offset is defined, and the transition
+/// definitions.
+///
+/// The algorithm is basically a BFS. We determine which edge of the cube we're
+/// on, and then "roll" the cube around until we find a new section of the map
+/// where the same edge is also on the bottom. Then we make the necessary
+/// translation back into a coordinate and facing direction.
 fn step_cube(map: &Map, coord: C2D, facing: usize) -> (C2D, usize) {
     let edge = facing_to_edge(facing);
     let edgesize = map.edgesize;
