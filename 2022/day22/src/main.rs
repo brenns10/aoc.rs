@@ -11,6 +11,13 @@ use regex::Regex;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
+/// C2D - coordinate in 2 dimensions. For this challenge I went with (X, Y)
+/// notation here rather than (row, column), but also Y increases as you go
+/// down. Don't ask me what I was thinking.
+///
+/// As is usual for my coordinates, they can be used for addition/subtraction,
+/// but also I added a multiply function to help with stepping over great
+/// distances.
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
 struct C2D(isize, isize);
 
@@ -36,6 +43,8 @@ impl C2D {
     }
 }
 
+/// FACINGS are the directions you could be facing while traversing the map.
+/// This is directly from the problem description.
 const FACINGS: &[C2D] = &[
     C2D(1, 0),  // right
     C2D(0, 1),  // down
@@ -43,6 +52,9 @@ const FACINGS: &[C2D] = &[
     C2D(0, -1), // up
 ];
 
+/// The content of a particular location of the map can either be a wall, an
+/// open space, or something that's off the map but not out of bounds of the
+/// array.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Cell {
     Offmap,
@@ -50,12 +62,96 @@ enum Cell {
     Wall,
 }
 
+#[derive(Clone, Copy)]
+enum StepStrategy {
+    Flat,
+    Cube,
+}
+
+/// Map - this is some variation on my somewhat "standard" map structure, where
+/// you have a small finite boundary indexed in two dimensions. It uses the X, Y
+/// method of indexing, with Y increasing as you go down. The map also stores
+/// the edge size of the cube - this is the main difference compared to other
+/// versions. The map doesn't contain too much in the way of cube logic, the
+/// idea is to keep that separate.
 struct Map {
     arr: Vec<Cell>,
     width: usize,
     height: usize,
     start: C2D,
     edgesize: isize,
+}
+
+impl Map {
+    fn ix(&self, coord: &C2D) -> usize {
+        if coord.0 < 0 || coord.1 < 0 {
+            panic!("Negative coordinate");
+        }
+        coord.0 as usize + coord.1 as usize * self.width
+    }
+    fn read_string(s: &str) -> MyResult<Map> {
+        let lines: Vec<_> = s.lines().collect();
+        let width = lines.iter().map(|s| s.len()).max().unwrap();
+        let height = lines.len();
+        let arr: Vec<Cell> = iter::repeat(Cell::Offmap).take(width * height).collect();
+        let mut map = Map{arr, width, height, start: C2D(0, 0), edgesize: 0};
+        let mut count_spaces = 0;
+        let mut first = true;
+        for (y, line) in lines.iter().enumerate() {
+            for (i, c) in line.chars().enumerate() {
+                let cell = match c {
+                    ' ' => continue,
+                    '.' => Cell::Open,
+                    '#' => Cell::Wall,
+                    _ => return Err("invalid char".into()),
+                };
+                count_spaces += 1;
+                let coord = C2D(i as isize, y as isize);
+                if first && cell == Cell::Open {
+                    map.start = coord;
+                    first = false;
+                }
+                let ix = map.ix(&coord);
+                map.arr[ix] = cell;
+            }
+        }
+        /* We now need to determine this cube's edge size. */
+        let edge_size = ((count_spaces / 6) as f64).sqrt() as isize;
+        if edge_size * edge_size * 6 != count_spaces {
+            return Err("This map is not a cube!".into())
+        }
+        map.edgesize = edge_size;
+        Ok(map)
+    }
+    fn get(&self, coord: &C2D) -> Cell {
+        let ix = self.ix(coord);
+        self.arr[ix]
+    }
+    fn in_bounds(&self, coord: &C2D) -> bool {
+        (0 <= coord.0) && (coord.0 < self.width as isize) && (0 <= coord.1) && (coord.1 < self.height as isize)
+    }
+    fn print(&self, pos: &C2D) {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let cur = C2D(x as isize, y as isize);
+                let cell = self.get(&cur);
+                if cur == *pos {
+                    if cell != Cell::Open {
+                        panic!("Bad location!")
+                    }
+                    print!("@");
+                    continue;
+                }
+                let s = match cell {
+                    Cell::Offmap => " ",
+                    Cell::Open => ".",
+                    Cell::Wall => "#",
+                };
+                print!("{}", s);
+            }
+            print!("\n");
+        }
+    }
 }
 
 /*
@@ -135,6 +231,11 @@ const RIGHT_LEFT_TRANS: [(u8, u8, bool); 12] = [
     (6, 3, false),
 ];
 
+/// Translate from a "facing" (which is an index into the FACINGS array and also
+/// a number used in the problem description) into an edge number.
+///
+/// This is intended be used when we're leaving one face of the cube. The
+/// direction we're facing corresponds to the edge we must currently be at.
 fn facing_to_edge(facing: usize) -> u8 {
     match facing {
         0 => 2, /* facing right: edge 2 */
@@ -145,6 +246,11 @@ fn facing_to_edge(facing: usize) -> u8 {
     }
 }
 
+/// Translate from an edge number to the corresponding facing. As opposed to the
+/// above function, this is actually a different mapping, because it is designed
+/// to be used for the case where you are *entering* a new cube face. Entering a
+/// cube face while facing right means that you are entering the left side, thus
+/// the difference.
 fn edge_to_facing(edge: u8) -> usize {
     match edge {
         2 => 2,
@@ -155,6 +261,8 @@ fn edge_to_facing(edge: u8) -> usize {
     }
 }
 
+/// Given an edge on the bottom face of the cube, and a coordinate, return the
+/// offset.
 fn edge_offset(edge: u8, coord: C2D, edgesize: isize) -> isize {
     /* Only valid for edges 1-4, convert the coordinate to an offset given an
      * edge. */
@@ -166,6 +274,8 @@ fn edge_offset(edge: u8, coord: C2D, edgesize: isize) -> isize {
     }
 }
 
+/// Given an edge and a direction we're traveling with the cube, return the new
+/// edge number and a flag true if we need to negate the offset.
 fn edge_transition(edge: u8, roll: usize) -> (u8, bool) {
     let reg = !(roll == 1 || roll == 2);
     let arr = if roll % 2 == 1 { UP_DOWN_TRANS } else { RIGHT_LEFT_TRANS };
@@ -180,8 +290,14 @@ fn edge_transition(edge: u8, roll: usize) -> (u8, bool) {
     panic!("Bad edge in transition")
 }
 
-fn find_next(map: &Map, coord: C2D, facing: usize, edgesize: isize) -> (C2D, usize) {
+/// Step off the map, assuming it's a cube. This implements one possible "step
+/// strategy". The algorithm is basically a BFS. We determine which edge of the
+/// cube we're on, and then "roll" the cube around until we find a new section
+/// of the map where the same edge is also on the bottom. Then we make the
+/// necessary translation back into a coordinate and facing direction.
+fn step_cube(map: &Map, coord: C2D, facing: usize) -> (C2D, usize) {
     let edge = facing_to_edge(facing);
+    let edgesize = map.edgesize;
     let offset = edge_offset(edge, coord, edgesize);
     let mut explore: Vec<(C2D, u8, isize)> = Vec::new();
     let mut seen: HashSet<C2D> = HashSet::new();
@@ -190,34 +306,26 @@ fn find_next(map: &Map, coord: C2D, facing: usize, edgesize: isize) -> (C2D, usi
     while !explore.is_empty() {
         let (this_coord, edge, offset) = explore.pop().unwrap();
         seen.insert(this_coord);
-        //println!("Visiting coord: {:?}", this_coord);
         for dir in 0..FACINGS.len() {
             let new_coord = this_coord + FACINGS[dir].multiply(edgesize);
-            //println!("  Consider block of coordinate {:?} (block: {}, {}), a move in direction {}", new_coord, new_coord.0 / EDGSIZE, new_coord.1 / EDGSIZE, dir);
             if !map.in_bounds(&new_coord) {
-                //println!("  => out of bounds");
                 continue;
             }
             if let Cell::Offmap = map.get(&new_coord) {
-                // Not on the map, keep looking
-                //println!("  => off map");
                 continue;
             }
             if new_coord == coord {
-                //println!("  => visiting original");
                 continue;
             }
             // This is on the cube map, but would the transition leave us on an
             // edge which is in contact with the "paper"?
             let (new_edge, negate) = edge_transition(edge, dir);
             let new_offset = if negate { edgesize - 1 - offset } else { offset };
-            //println!("    Transition from edge {} to {}, offset {} to {}", edge, new_edge, offset, new_offset);
             if new_edge <= 4 {
                 // Yay, we found the new square, we just need to convert back to
                 // a coordinate and facing.
                 let b = C2D(new_coord.0 - new_coord.0 % edgesize, new_coord.1 - new_coord.1 % edgesize);
                 let new_facing = edge_to_facing(new_edge);
-                //println!("  {:?}", b);
                 let real_coord = match new_edge {
                     1 => C2D(b.0 + new_offset, b.1),
                     2 => C2D(b.0 + edgesize - 1, b.1 + new_offset),
@@ -225,142 +333,87 @@ fn find_next(map: &Map, coord: C2D, facing: usize, edgesize: isize) -> (C2D, usi
                     4 => C2D(b.0, b.1 + new_offset),
                     _ => panic!("Bad edge"),
                 };
-                //println!("  Next: {:?} facing {} -> {:?} facing {}", coord, facing, real_coord, new_facing);
                 return (real_coord, new_facing)
             }
             // Ok, this isn't the right location, keep searching
             //println!("    Not on the bottom edge, continuing");
             if !seen.contains(&new_coord) {
-                //println!("    => pushed");
                 explore.push((new_coord, new_edge, new_offset));
             }
         }
     }
-    panic!("Colud not find next coordinate!")
+    panic!("Could not find next coordinate!")
 }
 
-impl Map {
-    fn ix(&self, coord: &C2D) -> usize {
-        if coord.0 < 0 || coord.1 < 0 {
-            panic!("Negative coordinate");
+/// Step off the map, assuming it's flat, like pac-man. You just need to
+/// backtrack to the other side of the map.
+fn step_flat(map: &Map, coord: C2D, dir: usize) -> (C2D, usize) {
+    let mut bt = coord;
+    while map.in_bounds(&(bt - FACINGS[dir])) && map.get(&(bt - FACINGS[dir])) != Cell::Offmap {
+        bt = bt - FACINGS[dir];
+    }
+    (bt, dir)
+}
+
+/// Move starting from coord in direction dir, for count steps, using the given
+/// step strategy. The step strategy is used to figure out what happens when we
+/// leave one side of the map.
+/// Return the new location and the new direction.
+fn do_move(map: &Map, coord: C2D, dir: usize, count: usize, strat: StepStrategy) -> (C2D, usize) {
+    let mut dir = dir;
+    let mut cur = coord;
+    for _ in 0..count {
+        let mut next = cur + FACINGS[dir];
+        let mut next_dir = dir;
+        if !map.in_bounds(&next) || map.get(&next) == Cell::Offmap {
+            (next, next_dir) = match strat {
+                StepStrategy::Flat => step_flat(map, cur, dir),
+                StepStrategy::Cube => step_cube(map, cur, dir),
+            };
         }
-        coord.0 as usize + coord.1 as usize * self.width
-    }
-    fn read_string(s: &str) -> MyResult<Map> {
-        let lines: Vec<_> = s.lines().collect();
-        let width = lines.iter().map(|s| s.len()).max().unwrap();
-        let height = lines.len();
-        let arr: Vec<Cell> = iter::repeat(Cell::Offmap).take(width * height).collect();
-        let mut map = Map{arr, width, height, start: C2D(0, 0), edgesize: 0};
-        let mut count_spaces = 0;
-        let mut first = true;
-        for (y, line) in lines.iter().enumerate() {
-            for (i, c) in line.chars().enumerate() {
-                let cell = match c {
-                    ' ' => continue,
-                    '.' => Cell::Open,
-                    '#' => Cell::Wall,
-                    _ => return Err("invalid char".into()),
-                };
-                count_spaces += 1;
-                let coord = C2D(i as isize, y as isize);
-                if first && cell == Cell::Open {
-                    map.start = coord;
-                    first = false;
-                }
-                let ix = map.ix(&coord);
-                map.arr[ix] = cell;
-            }
-        }
-        /* We now need to determine this cube's edge size. */
-        let edge_size = ((count_spaces / 6) as f64).sqrt() as isize;
-        if edge_size * edge_size * 6 != count_spaces {
-            return Err("This map is not a cube!".into())
-        }
-        map.edgesize = edge_size;
-        Ok(map)
-    }
-    fn get(&self, coord: &C2D) -> Cell {
-        let ix = self.ix(coord);
-        self.arr[ix]
-    }
-    fn in_bounds(&self, coord: &C2D) -> bool {
-        (0 <= coord.0) && (coord.0 < self.width as isize) && (0 <= coord.1) && (coord.1 < self.height as isize)
-    }
-    fn mov(&self, coord: C2D, dir: usize, count: usize) -> (C2D, usize) {
-        let mut cur = coord;
-        let dirc = FACINGS[dir];
-        for _ in 0..count {
-            let next = cur + dirc;
-            if !self.in_bounds(&next) || self.get(&next) == Cell::Offmap {
-                let mut bt = cur;
-                while self.in_bounds(&(bt - dirc)) && self.get(&(bt - dirc)) != Cell::Offmap {
-                    bt = bt - dirc;
-                }
-                if self.get(&bt) == Cell::Open {
-                    cur = bt;
-                }
-            } else if self.get(&next) == Cell::Open {
-                cur = next;
-            } else {
-                break;
-            }
-        }
-        (cur, dir)
-    }
-    fn mov_cube(&self, coord: C2D, dir: usize, count: usize) -> (C2D, usize) {
-        let mut dir = dir;
-        let mut cur = coord;
-        let mut dirc = FACINGS[dir];
-        for _ in 0..count {
-            let next = cur + dirc;
-            if !self.in_bounds(&next) || self.get(&next) == Cell::Offmap {
-                //println!("At {:?} facing {}, next {:?} is out of bounds or off map",
-                //    cur, dir, next);
-                let (bt, facing) = find_next(self, cur, dir, self.edgesize);
-                if self.get(&bt) == Cell::Open {
-                    cur = bt;
-                    dir = facing;
-                    dirc = FACINGS[dir];
-                } else {
-                    break; /* welp we've hit a wall */
-                }
-            } else if self.get(&next) == Cell::Open {
-                cur = next;
-            } else {
-                break;
-            }
-        }
-        (cur, dir)
-    }
-    fn print(&self, pos: &C2D) {
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let cur = C2D(x as isize, y as isize);
-                let cell = self.get(&cur);
-                if cur == *pos {
-                    if cell != Cell::Open {
-                        panic!("Bad location!")
-                    }
-                    print!("@");
-                    continue;
-                }
-                let s = match cell {
-                    Cell::Offmap => " ",
-                    Cell::Open => ".",
-                    Cell::Wall => "#",
-                };
-                print!("{}", s);
-            }
-            print!("\n");
+        if map.get(&next) == Cell::Open {
+            cur = next;
+            dir = next_dir;
+        } else {
+            break;
         }
     }
+    (cur, dir)
 }
 
 enum Instruction {
     Left,
     Right,
     Move(usize),
+}
+
+fn do_path(map: &Map, instrs: &Vec<Instruction>, strat: StepStrategy, verbose: bool) {
+    let mut facing: usize = 0;
+    let mut coord = map.start;
+    if verbose {
+        println!("Start:");
+        map.print(&coord);
+    }
+    for instr in instrs.iter() {
+        use Instruction::*;
+        match instr {
+            Left => {
+                facing = (facing + FACINGS.len() - 1) % FACINGS.len();
+                if verbose {println!("Pivot left, new facing is: {}", facing)};
+            },
+            Right => {
+                facing = (facing + 1) % FACINGS.len();
+                if verbose {println!("Pivot right, new facing is: {}", facing)};
+            },
+            Move(amt) => {
+                if verbose { println!("Moving {}...", amt) }
+                (coord, facing) = do_move(map, coord, facing, *amt, strat);
+                if verbose {map.print(&coord)}
+            }
+        }
+    }
+    println!("Final row={}, column={}, facing={}", coord.1, coord.0, facing);
+    println!("Password: {}", (coord.1 + 1) * 1000 + (coord.0 + 1) * 4 + facing as isize);
 }
 
 fn read_input(filename: &str) -> MyResult<(Map, Vec<Instruction>)> {
@@ -384,39 +437,6 @@ fn read_input(filename: &str) -> MyResult<(Map, Vec<Instruction>)> {
     Ok((mapval, instrs))
 }
 
-fn do_path(map: &Map, instrs: &Vec<Instruction>, cube: bool, verbose: bool) {
-    let mut facing: usize = 0;
-    let mut coord = map.start;
-    if verbose {
-        println!("Start:");
-        map.print(&coord);
-    }
-    for instr in instrs.iter() {
-        use Instruction::*;
-        match instr {
-            Left => {
-                facing = (facing + FACINGS.len() - 1) % FACINGS.len();
-                if verbose {println!("Pivot left, new facing is: {}", facing)};
-            },
-            Right => {
-                facing = (facing + 1) % FACINGS.len();
-                if verbose {println!("Pivot right, new facing is: {}", facing)};
-            },
-            Move(amt) => {
-                if verbose { println!("Moving {}...", amt) }
-                if cube {
-                    (coord, facing) = map.mov_cube(coord, facing, *amt)
-                } else {
-                    (coord, facing) = map.mov(coord, facing, *amt)
-                }
-                if verbose {map.print(&coord)}
-            }
-        }
-    }
-    println!("Final row={}, column={}, facing={}", coord.1, coord.0, facing);
-    println!("Password: {}", (coord.1 + 1) * 1000 + (coord.0 + 1) * 4 + facing as isize);
-}
-
 fn main() {
     let mut filename = "input.txt";
     let mut verbose = false;
@@ -426,6 +446,6 @@ fn main() {
         verbose = true;
     }
     let (map, instrs) = read_input(filename).unwrap();
-    do_path(&map, &instrs, false, false);
-    do_path(&map, &instrs, true, verbose);
+    do_path(&map, &instrs, StepStrategy::Flat, false);
+    do_path(&map, &instrs, StepStrategy::Cube, verbose);
 }
