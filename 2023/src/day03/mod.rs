@@ -112,8 +112,8 @@ impl Arr2D {
     }
 }
 
-fn main() {
-    let arr = Arr2D::read_file("input.txt").unwrap();
+pub fn run(fln: &str) {
+    let arr = Arr2D::read_file(fln).unwrap();
     let mut part_number_sum = 0;
     let mut gear_to_numbers: HashMap<Point, Vec<u32>> = HashMap::new();
     let mut gears: HashSet<Point> = HashSet::new();

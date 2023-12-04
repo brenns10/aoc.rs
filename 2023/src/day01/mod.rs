@@ -50,8 +50,8 @@ fn get_spelled_line_number(re: &Regex, er: &Regex, line: &str) -> Option<u32> {
     Some(digit_val(first)? * 10 + digit_val(&last)?)
 }
 
-fn get_line_sum(sum_fn: &dyn Fn (&str) -> Option<u32>) -> MyResult<u32> {
-    let reader = BufReader::new(File::open("input.txt")?);
+fn get_line_sum(fln: &str, sum_fn: &dyn Fn (&str) -> Option<u32>) -> MyResult<u32> {
+    let reader = BufReader::new(File::open(fln)?);
     let mut sum = 0;
     for line_res in reader.lines() {
         let line = line_res?;
@@ -61,12 +61,12 @@ fn get_line_sum(sum_fn: &dyn Fn (&str) -> Option<u32>) -> MyResult<u32> {
     Ok(sum)
 }
 
-fn main() {
-    let sum = get_line_sum(&get_line_number).unwrap();
-    println!("Sum: {}", sum);
+pub fn run(fln: &str) {
+    let sum = get_line_sum(fln, &get_line_number).unwrap();
+    println!("Part 1: {}", sum);
 
     let re = Regex::new("one|two|three|four|five|six|seven|eight|nine|[0-9]").unwrap();
     let er = Regex::new("[0-9]|enin|thgie|neves|xis|evif|ruof|eerht|owt|eno").unwrap();
-    let sum = get_line_sum(&|l| get_spelled_line_number(&re, &er, l)).unwrap();
-    println!("Sum including words: {}", sum);
+    let sum = get_line_sum(fln, &|l| get_spelled_line_number(&re, &er, l)).unwrap();
+    println!("Part 2: {}", sum);
 }

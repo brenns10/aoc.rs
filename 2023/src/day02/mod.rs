@@ -55,8 +55,8 @@ fn power_minimum(_: usize, cubes: Vec<Cubes>) -> MyResult<usize> {
     Ok(min_cube.red as usize * min_cube.green as usize * min_cube.blue as usize)
 }
 
-fn sum_games(f: &dyn Fn(usize, Vec<Cubes>) -> MyResult<usize>) -> MyResult<usize> {
-    let reader = BufReader::new(File::open("input.txt")?);
+fn sum_games(fln: &str, f: &dyn Fn(usize, Vec<Cubes>) -> MyResult<usize>) -> MyResult<usize> {
+    let reader = BufReader::new(File::open(fln)?);
     let mut count: usize = 0;
     for (i, liner) in reader.lines().enumerate() {
         let line = liner?;
@@ -67,10 +67,10 @@ fn sum_games(f: &dyn Fn(usize, Vec<Cubes>) -> MyResult<usize>) -> MyResult<usize
     Ok(count)
 }
 
-fn main() {
+pub fn run(fln: &str) {
     let total = Cubes{red: 12, green: 13, blue: 14};
-    let possible = sum_games(&|i, s| possible_game(i, &total, s)).unwrap();
-    println!("Sum of possible game IDs: {}", possible);
-    let powers = sum_games(&power_minimum).unwrap();
-    println!("Sum of powers of minimum cube sets: {}", powers);
+    let possible = sum_games(fln, &|i, s| possible_game(i, &total, s)).unwrap();
+    println!("Part 1: {}", possible);
+    let powers = sum_games(fln, &power_minimum).unwrap();
+    println!("Part 2: {}", powers);
 }
