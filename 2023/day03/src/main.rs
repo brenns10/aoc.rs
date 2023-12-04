@@ -1,8 +1,10 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
 use std::ops::{Add, Sub};
+use std::hash::Hash;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct Point(isize, isize);
 
 pub const DIRECTIONS: [Point; 8] = [
@@ -16,6 +18,7 @@ impl PartialEq for Point {
         self.0 == rhs.0 && self.1 == rhs.1
     }
 }
+impl Eq for Point {}
 impl Add for Point {
     type Output = Point;
     fn add(self, rhs: Point) -> Point {
@@ -112,32 +115,58 @@ impl Arr2D {
 fn main() {
     let arr = Arr2D::read_file("input.txt").unwrap();
     let mut part_number_sum = 0;
+    let mut gear_to_numbers: HashMap<Point, Vec<u32>> = HashMap::new();
+    let mut gears: HashSet<Point> = HashSet::new();
     for row in 0..arr.rows {
-        let mut number = 0;
+        let mut number: u32 = 0;
         let mut is_part = false;
         for col in 0..arr.cols {
             if let Some(val) = arr.get_at(row, col).to_digit(10) {
                 number = number * 10 + val;
-                if !is_part {
-                    for point in arr.adjacent_to(row, col) {
-                        let cell = arr.get(point);
-                        if !cell.is_digit(10) && cell != '.' {
-                            is_part = true;
-                            break;
-                        }
+                for point in arr.adjacent_to(row, col) {
+                    let cell = arr.get(point);
+                    if !cell.is_digit(10) && cell != '.' {
+                        is_part = true;
+                    }
+                    if cell == '*' {
+                        gears.insert(point);
                     }
                 }
             } else if number > 0 {
                 if is_part {
                     part_number_sum += number;
+                    for gear in gears.iter() {
+                        if let Some(vec) = gear_to_numbers.get_mut(gear) {
+                            vec.push(number);
+                        } else {
+                            gear_to_numbers.insert(*gear, vec![number]);
+                        }
+                    }
                 }
                 number = 0;
                 is_part = false;
+                gears.clear();
             }
         }
         if number > 0 && is_part {
             part_number_sum += number;
+            for gear in gears.iter() {
+                if let Some(vec) = gear_to_numbers.get_mut(gear) {
+                    vec.push(number);
+                } else {
+                    gear_to_numbers.insert(*gear, vec![number]);
+                }
+            }
         }
+        gears.clear();
     }
     println!("Part 1: {}", part_number_sum);
+
+    let mut sum_ratios = 0;
+    for (_, numbers) in gear_to_numbers.iter() {
+        if numbers.len() == 2 {
+            sum_ratios += numbers[0] * numbers[1];
+        }
+    }
+    println!("Part 2: {}", sum_ratios);
 }
