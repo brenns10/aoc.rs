@@ -2,6 +2,8 @@ use std::env;
 use std::iter::Iterator;
 use std::time::Instant;
 
+mod arr;
+
 mod day01;
 mod day02;
 mod day03;
