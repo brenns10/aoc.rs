@@ -1,17 +1,8 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter::{Iterator, self};
-use std::num::ParseIntError;
 
-pub fn read_ints(s: &str) -> Result<Vec<u32>, ParseIntError> {
-    let mut vec = Vec::new();
-
-    for num in s.split_ascii_whitespace() {
-        vec.push(u32::from_str_radix(num, 10)?);
-    }
-
-    Ok(vec)
-}
+use crate::util::read_ints;
 
 pub fn run(fln: &str) {
     let r = BufReader::new(File::open(fln).unwrap());
@@ -25,8 +16,8 @@ pub fn run(fln: &str) {
         let line = line.unwrap();
         let colon = line.find(":").unwrap();
         let pipe = line.find("|").unwrap();
-        let winning = read_ints(&line[colon + 1..pipe]).unwrap();
-        let mine = read_ints(&line[pipe + 1..]).unwrap();
+        let winning: Vec<u32> = read_ints(&line[colon + 1..pipe]).unwrap();
+        let mine: Vec<u32> = read_ints(&line[pipe + 1..]).unwrap();
         for num in mine.iter() {
             if winning.contains(&num) {
                 count += 1;

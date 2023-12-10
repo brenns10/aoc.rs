@@ -3,6 +3,7 @@ use std::iter::Iterator;
 use std::time::Instant;
 
 mod arr;
+mod util;
 
 mod day01;
 mod day02;

@@ -1,23 +1,12 @@
-use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-type MyResult<T> = Result<T, Box<dyn Error>>;
+use crate::util::{MyResult, read_ints};
 
 struct Map {
     dst: usize,
     src: usize,
     len: usize,
-}
-
-pub fn read_ints(s: &str) -> MyResult<Vec<usize>> {
-    let mut vec = Vec::new();
-
-    for num in s.split_ascii_whitespace() {
-        vec.push(usize::from_str_radix(num, 10)?);
-    }
-
-    Ok(vec)
 }
 
 fn read_maps(fln: &str) -> MyResult<(Vec<usize>, Vec<Vec<Map>>)> {
