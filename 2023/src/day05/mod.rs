@@ -61,4 +61,58 @@ pub fn run(fln: &str) {
         }
     }
     println!("Part 1: {}", current.iter().min().unwrap());
+
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    for i in (0..seeds.len()).step_by(2) {
+        ranges.push((seeds[i], seeds[i] + seeds[i + 1]))
+    }
+
+    for maplist in maps.iter() {
+        let mut next_ranges: Vec<(usize, usize)> = Vec::new();
+        //println!("ranges len: {}", ranges.len());
+        while !ranges.is_empty() {
+            let (start, end) = ranges.pop().unwrap();
+            let mut mapped = false;
+            for map in maplist.iter() {
+                let map_end = map.src + map.len;
+                if start >= map_end || end <= map.src {
+                    continue;
+                }
+                mapped = true;
+
+                //println!("Current range: {}, {}", start, end);
+                //println!("    map range: {}, {}", map.src, map_end);
+
+                // Overlap: break the range into as many as 3 sub-ranges:
+                // [start .. map.src) -> still unmapped
+                // [map.src .. map_end) -> mapped to next ranges
+                // [map_end .. end) -> still unmapped
+                if start < map.src {
+                    // still unmapped
+                    //println!("unmapped range at start: {}, {}", start, map.src);
+                    ranges.push((start, map.src));
+                }
+                // The mapped portion: always exists
+                next_ranges.push(
+                    (std::cmp::max(start, map.src) - map.src + map.dst,
+                     std::cmp::min(end, map_end) - map.src + map.dst));
+                //println!("mapping: {}, {}", std::cmp::max(start, map.src), std::cmp::min(end, map_end));
+                if map_end < end {
+                    ranges.push((map_end, end));
+                    //println!("unmapped range at end: {}, {}", map_end, end);
+                }
+                // We've handled this range by breaking it up, no need to
+                // continue looking through the maplist
+                break;
+            }
+            if !mapped {
+                // Never found any mapping for the entire range, great!
+                //println!("unmapped");
+                next_ranges.push((start, end));
+            }
+        }
+        ranges = next_ranges;
+    }
+    //println!("final ranges len: {}", ranges.len()); //
+    println!("Part 2: {}", ranges.iter().min().unwrap().0);
 }
