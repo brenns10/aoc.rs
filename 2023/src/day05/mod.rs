@@ -1,7 +1,10 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use crate::util::{MyResult, read_ints};
+use crate::util::MyResult;
+use crate::util::read_ints;
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
 struct Map {
     dst: usize,
@@ -12,7 +15,7 @@ struct Map {
 fn read_maps(fln: &str) -> MyResult<(Vec<usize>, Vec<Vec<Map>>)> {
     let mut maps = Vec::new();
 
-    let r = BufReader::new(File::open(fln).unwrap());
+    let r = BufReader::new(File::open(fln)?);
     let mut lines = r.lines();
     let seed_line = lines.next().ok_or("Missing first line")??;
     let index = seed_line.find(":").ok_or("Seed line missing colon")?;
@@ -47,8 +50,8 @@ fn read_maps(fln: &str) -> MyResult<(Vec<usize>, Vec<Vec<Map>>)> {
     Ok((seeds, maps))
 }
 
-pub fn run(fln: &str) {
-    let (seeds, maps) = read_maps(fln).unwrap();
+pub fn run(fln: &str) -> RunResult {
+    let (seeds, maps) = read_maps(fln)?;
     let mut current = seeds.clone();
     for maplist in maps.iter() {
         for i in 0..current.len() {
@@ -60,7 +63,8 @@ pub fn run(fln: &str) {
             }
         }
     }
-    println!("Part 1: {}", current.iter().min().unwrap());
+    let part1 = current.iter().min().ok_or("impossible condition")?;
+    println!("Part 1: {}", part1);
 
     let mut ranges: Vec<(usize, usize)> = Vec::new();
     for i in (0..seeds.len()).step_by(2) {
@@ -71,7 +75,7 @@ pub fn run(fln: &str) {
         let mut next_ranges: Vec<(usize, usize)> = Vec::new();
         //println!("ranges len: {}", ranges.len());
         while !ranges.is_empty() {
-            let (start, end) = ranges.pop().unwrap();
+            let (start, end) = ranges.pop().ok_or("impossible condition")?;
             let mut mapped = false;
             for map in maplist.iter() {
                 let map_end = map.src + map.len;
@@ -114,5 +118,7 @@ pub fn run(fln: &str) {
         ranges = next_ranges;
     }
     //println!("final ranges len: {}", ranges.len()); //
-    println!("Part 2: {}", ranges.iter().min().unwrap().0);
+    let part2 = ranges.iter().min().ok_or("impossible condition")?.0;
+    println!("Part 2: {}", part2);
+    return_part1and2(*part1 as isize, part2 as isize)
 }

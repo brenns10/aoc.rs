@@ -3,9 +3,11 @@ use std::io::{BufRead, BufReader};
 use std::iter::{Iterator, self};
 
 use crate::util::read_ints;
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
-pub fn run(fln: &str) {
-    let r = BufReader::new(File::open(fln).unwrap());
+pub fn run(fln: &str) -> RunResult {
+    let r = BufReader::new(File::open(fln)?);
     let mut score = 0;
 
     let mut counts: Vec<u32> = Vec::new();
@@ -13,11 +15,11 @@ pub fn run(fln: &str) {
     for line in r.lines() {
         let mut card_score = 0;
         let mut count = 0;
-        let line = line.unwrap();
-        let colon = line.find(":").unwrap();
-        let pipe = line.find("|").unwrap();
-        let winning: Vec<u32> = read_ints(&line[colon + 1..pipe]).unwrap();
-        let mine: Vec<u32> = read_ints(&line[pipe + 1..]).unwrap();
+        let line = line?;
+        let colon = line.find(":").ok_or("missing colon")?;
+        let pipe = line.find("|").ok_or("missing pipe")?;
+        let winning: Vec<u32> = read_ints(&line[colon + 1..pipe])?;
+        let mine: Vec<u32> = read_ints(&line[pipe + 1..])?;
         for num in mine.iter() {
             if winning.contains(&num) {
                 count += 1;
@@ -38,4 +40,6 @@ pub fn run(fln: &str) {
         }
     }
     println!("Part 2: {}", total);
+
+    return_part1and2(score as isize, total as isize)
 }

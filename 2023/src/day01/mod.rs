@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter::Iterator;
-use std::error::Error;
-use std::result::Result;
 
 use regex::Regex;
 
-type MyResult<T> = Result<T, Box<dyn Error>>;
+use crate::util::MyResult;
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
 fn get_line_number(line: &str) -> Option<u32> {
     let mut first: Option<u32> = None;
@@ -61,12 +61,13 @@ fn get_line_sum(fln: &str, sum_fn: &dyn Fn (&str) -> Option<u32>) -> MyResult<u3
     Ok(sum)
 }
 
-pub fn run(fln: &str) {
-    let sum = get_line_sum(fln, &get_line_number).unwrap();
-    println!("Part 1: {}", sum);
+pub fn run(fln: &str) -> RunResult {
+    let part1 = get_line_sum(fln, &get_line_number).unwrap();
+    println!("Part 1: {}", part1);
 
     let re = Regex::new("one|two|three|four|five|six|seven|eight|nine|[0-9]").unwrap();
     let er = Regex::new("[0-9]|enin|thgie|neves|xis|evif|ruof|eerht|owt|eno").unwrap();
-    let sum = get_line_sum(fln, &|l| get_spelled_line_number(&re, &er, l)).unwrap();
-    println!("Part 2: {}", sum);
+    let part2 = get_line_sum(fln, &|l| get_spelled_line_number(&re, &er, l)).unwrap();
+    println!("Part 2: {}", part2);
+    return_part1and2(part1 as isize, part2 as isize)
 }

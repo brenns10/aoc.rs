@@ -1,9 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::arr::{Arr2D, Point};
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
-pub fn run(fln: &str) {
-    let arr = Arr2D::read_file(fln).unwrap();
+pub fn run(fln: &str) -> RunResult {
+    let arr = Arr2D::read_file(fln)?;
     let mut part_number_sum = 0;
     let mut gear_to_numbers: HashMap<Point, Vec<u32>> = HashMap::new();
     let mut gears: HashSet<Point> = HashSet::new();
@@ -59,4 +61,6 @@ pub fn run(fln: &str) {
         }
     }
     println!("Part 2: {}", sum_ratios);
+
+    return_part1and2(part_number_sum as isize, sum_ratios as isize)
 }

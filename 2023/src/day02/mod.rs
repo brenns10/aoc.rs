@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter::Iterator;
-use std::error::Error;
-use std::result::Result;
 use std::cmp;
 
-type MyResult<T> = Result<T, Box<dyn Error>>;
+use crate::util::MyResult;
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
 #[derive(Clone, Copy)]
 struct Cubes {
@@ -67,10 +67,11 @@ fn sum_games(fln: &str, f: &dyn Fn(usize, Vec<Cubes>) -> MyResult<usize>) -> MyR
     Ok(count)
 }
 
-pub fn run(fln: &str) {
+pub fn run(fln: &str) -> RunResult {
     let total = Cubes{red: 12, green: 13, blue: 14};
-    let possible = sum_games(fln, &|i, s| possible_game(i, &total, s)).unwrap();
+    let possible = sum_games(fln, &|i, s| possible_game(i, &total, s))?;
     println!("Part 1: {}", possible);
-    let powers = sum_games(fln, &power_minimum).unwrap();
+    let powers = sum_games(fln, &power_minimum)?;
     println!("Part 2: {}", powers);
+    return_part1and2(possible as isize, powers as isize)
 }

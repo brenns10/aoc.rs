@@ -1,24 +1,27 @@
 use std::fs::File;
 use std::io::Read;
 
+use crate::util::MyResult;
 use crate::util::read_ints;
+use crate::util::return_part1and2;
+use crate::util::RunResult;
 
-fn combine_numbers(nums: &Vec<usize>) -> usize {
+fn combine_numbers(nums: &Vec<usize>) -> MyResult<usize> {
     let mut combined: usize = 0;
     for num in nums {
-        if *num < 10 {
-            combined = 10 * combined + *num as usize;
-        } else if *num < 100 {
-            combined = 100 * combined + *num as usize;
-        } else if *num < 1000 {
-            combined = 1000 * combined + *num as usize;
-        } else if *num < 10000 {
-            combined = 10000 * combined + *num as usize;
-        } else {
-            panic!("Numbers too large to combine");
+        let mut found = false;
+        for pow in 1..10 {
+            if *num < usize::pow(10, pow) {
+                combined = usize::pow(10, pow) * combined + *num;
+                found = true;
+                break
+            }
+        }
+        if !found {
+            return Err("numbers too large to combine".into());
         }
     }
-    combined
+    Ok(combined)
 }
 
 fn ways_to_win_bsearch(time: usize, record: usize) -> usize {
@@ -57,20 +60,20 @@ fn ways_to_win_bsearch(time: usize, record: usize) -> usize {
     upper_bound - lower_bound + 1
 }
 
-pub fn run(fln: &str) {
-    let mut file = File::open(fln).unwrap();
+pub fn run(fln: &str) -> RunResult {
+    let mut file = File::open(fln)?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
+    file.read_to_string(&mut contents)?;
 
-    let line_end = contents.find("\n").unwrap();
+    let line_end = contents.find("\n").ok_or("missing newline")?;
     let times_str = &contents[..line_end];
     let dists_str = &contents[line_end + 1..];
 
-    let colon = times_str.find(":").unwrap();
-    let times: Vec<usize> = read_ints(&times_str[colon + 1..]).unwrap();
+    let colon = times_str.find(":").ok_or("missing colon")?;
+    let times: Vec<usize> = read_ints(&times_str[colon + 1..])?;
 
-    let colon = dists_str.find(":").unwrap();
-    let dists: Vec<usize> = read_ints(&dists_str[colon + 1..]).unwrap();
+    let colon = dists_str.find(":").ok_or("missing colon")?;
+    let dists: Vec<usize> = read_ints(&dists_str[colon + 1..])?;
 
     assert!(times.len() == dists.len());
 
@@ -80,7 +83,10 @@ pub fn run(fln: &str) {
     }
     println!("Part 1: {}", product);
 
-    let time = combine_numbers(&times);
-    let dist = combine_numbers(&dists);
+    let time = combine_numbers(&times)?;
+    let dist = combine_numbers(&dists)?;
+    let part2 = ways_to_win_bsearch(time, dist);
     println!("Part 2: {}", ways_to_win_bsearch(time, dist));
+
+    return_part1and2(product as isize, part2 as isize)
 }
