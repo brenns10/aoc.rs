@@ -14,6 +14,7 @@ mod day04;
 mod day05;
 mod day06;
 mod day07;
+mod day08;
 
 type Runner = fn(&str) -> RunResult;
 struct TestCase(Runner, Option<isize>, Option<isize>, Option<isize>, Option<isize>);
@@ -27,6 +28,7 @@ const DAYS: &[TestCase] = &[
     TestCase(day05::run, Some(35), Some(46), Some(621354867), Some(15880236)),
     TestCase(day06::run, Some(288), Some(71503), Some(3316275), Some(27102791)),
     TestCase(day07::run, Some(6440), Some(5905), Some(250957639), Some(251515496)),
+    TestCase(day08::run, Some(2), None, Some(17621), None),
 ];
 
 fn run_one(case: &TestCase, fln: &str, expected: Option<(Option<isize>, Option<isize>)>) -> bool {
