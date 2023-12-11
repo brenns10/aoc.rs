@@ -10,6 +10,7 @@ mod day02;
 mod day03;
 mod day04;
 mod day05;
+mod day06;
 
 const DAYS: &[fn(&str) -> ()] = &[
     day01::run,
@@ -17,6 +18,7 @@ const DAYS: &[fn(&str) -> ()] = &[
     day03::run,
     day04::run,
     day05::run,
+    day06::run,
 ];
 
 fn do_run(dayno: u32, runner_fn: &fn(&str) -> (), fln: &str) {
