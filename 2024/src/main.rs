@@ -7,11 +7,13 @@ use util::RunResult;
 mod arr;
 mod util;
 
+mod day01;
 
 type Runner = fn(&str) -> RunResult;
 struct TestCase(Runner, Option<isize>, Option<isize>, Option<isize>, Option<isize>);
 
 const DAYS: &[TestCase] = &[
+    TestCase(day01::run, Some(11), None, None, None),
 ];
 
 fn run_one(case: &TestCase, fln: &str, expected: Option<(Option<isize>, Option<isize>)>) -> bool {
