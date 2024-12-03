@@ -29,7 +29,20 @@ fn compute_distance(a: &Vec<usize>, b: &Vec<usize>) -> usize {
     distance
 }
 
+fn compute_similarity(a: &Vec<usize>, b: &Vec<usize>) -> usize {
+    let mut sim = 0;
+    // The drop-dead stupid way, because I don't want to do the sort + merge
+    for av in a.iter() {
+        for bv in b.iter() {
+            if av == bv {
+                sim += av
+            }
+        }
+    }
+    sim
+}
+
 pub fn run(fln: &str) -> RunResult {
     let (a, b) = read_lists(fln)?;
-    Ok((Some(compute_distance(&a, &b) as isize), None))
+    Ok((Some(compute_distance(&a, &b) as isize), Some(compute_similarity(&a, &b) as isize)))
 }
