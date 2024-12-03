@@ -15,7 +15,7 @@ struct TestCase(Runner, Option<isize>, Option<isize>, Option<isize>, Option<isiz
 
 const DAYS: &[TestCase] = &[
     TestCase(day01::run, Some(11), Some(31), Some(2756096), Some(23117829)),
-    TestCase(day02::run, Some(2), None, None, None),
+    TestCase(day02::run, Some(2), None, Some(490), None),
 ];
 
 fn run_one(case: &TestCase, fln: &str, expected: Option<(Option<isize>, Option<isize>)>) -> bool {
