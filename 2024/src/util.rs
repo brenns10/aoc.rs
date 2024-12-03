@@ -20,3 +20,20 @@ where ParseIntError: From<<T as FromStr>::Err> {
 
     Ok(vec)
 }
+
+#[allow(dead_code)]
+pub fn read_arr<T: FromStr + Default + Copy, const N: usize>(s: &str) -> MyResult<[T; N]>
+where <T as FromStr>::Err: std::error::Error,
+      <T as FromStr>::Err: 'static {
+    let mut arr = [T::default(); N];
+    let mut i = 0;
+    for elem in s.split_ascii_whitespace() {
+        arr[i] = T::from_str(elem)?;
+        i += 1;
+    }
+    if i != N {
+        Err("Wrong number of elements".into())
+    } else {
+        Ok(arr)
+    }
+}
