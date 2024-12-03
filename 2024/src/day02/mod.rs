@@ -22,6 +22,18 @@ fn is_safe(report: &Vec<i32>) -> bool {
     inc == 0 || dec == 0
 }
 
+fn is_safe_with_dampener(report: &Vec<i32>) -> bool {
+    // I would try to do it a bit more efficiently, but this is so much easier.
+    for i in 0..report.len() {
+        let mut cp = report.clone();
+        cp.remove(i);
+        if is_safe(&cp) {
+            return true;
+        }
+    }
+    false
+}
+
 pub fn run(fln: &str) -> RunResult {
     let reader = BufReader::new(File::open(fln)?);
     let mut reports: Vec<Vec<i32>> = Vec::new();
@@ -29,5 +41,6 @@ pub fn run(fln: &str) -> RunResult {
         reports.push(read_ints(&line?)?);
     }
     let num_safe = reports.iter().map(|r| if is_safe(r) { 1 } else { 0 }).sum();
-    Ok((Some(num_safe), None))
+    let num_dampener = reports.iter().map(|r| if is_safe_with_dampener(r) { 1 } else { 0 }).sum();
+    Ok((Some(num_safe), Some(num_dampener)))
 }
