@@ -8,12 +8,14 @@ mod arr;
 mod util;
 
 mod day01;
+mod day02;
 
 type Runner = fn(&str) -> RunResult;
 struct TestCase(Runner, Option<isize>, Option<isize>, Option<isize>, Option<isize>);
 
 const DAYS: &[TestCase] = &[
     TestCase(day01::run, Some(11), Some(31), Some(2756096), Some(23117829)),
+    TestCase(day02::run, Some(2), None, None, None),
 ];
 
 fn run_one(case: &TestCase, fln: &str, expected: Option<(Option<isize>, Option<isize>)>) -> bool {
